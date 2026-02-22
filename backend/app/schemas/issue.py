@@ -13,11 +13,13 @@ class IssueCreateRequest(BaseModel):
     category: Category
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
+    image_base64: str | None = None
 
 
 class StatusUpdateRequest(BaseModel):
     status: IssueStatus
     comment: str | None = Field(default=None, max_length=500)
+    resolution_image_base64: str | None = None
 
 
 class StatusUpdateResponse(BaseModel):

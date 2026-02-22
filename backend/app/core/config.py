@@ -1,33 +1,49 @@
 from __future__ import annotations
 
+import json
+import os
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
-class Settings(BaseSettings):
-    app_name: str = "Smart City Issue Detection API"
-    api_prefix: str = "/api/v1"
-    db_path: Path = Path("backend/data/app.db")
-    jwt_secret_key: str = Field("change-me-in-env", min_length=16)
-    jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60 * 24
-    upload_dir: Path = Path("backend/uploads")
-    allowed_origins: list[str] = ["http://localhost:5173"]
-
-    # Existing ML assets
-    train_data_path: Path = Path("data/sample_issues.csv")
-    category_model_path: Path = Path("models/category_model.joblib")
-    urgency_model_path: Path = Path("models/urgency_model.joblib")
-
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+@dataclass
+class Settings:
+    app_name: str
+    api_prefix: str
+    db_path: Path
+    jwt_secret_key: str
+    jwt_algorithm: str
+    access_token_expire_minutes: int
+    upload_dir: Path
+    allowed_origins: list[str]
+    train_data_path: Path
+    category_model_path: Path
+    urgency_model_path: Path
 
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    settings = Settings()
+    raw_origins = os.getenv("ALLOWED_ORIGINS", '["http://localhost:5173"]')
+    try:
+        allowed_origins = json.loads(raw_origins)
+    except json.JSONDecodeError:
+        allowed_origins = [x.strip() for x in raw_origins.split(",") if x.strip()]
+
+    settings = Settings(
+        app_name=os.getenv("APP_NAME", "Smart City Issue Detection API"),
+        api_prefix=os.getenv("API_PREFIX", "/api/v1"),
+        db_path=Path(os.getenv("DB_PATH", "backend/data/app.db")),
+        jwt_secret_key=os.getenv("JWT_SECRET_KEY", "change-this-in-prod-min-16-chars"),
+        jwt_algorithm="HS256",
+        access_token_expire_minutes=int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440")),
+        upload_dir=Path(os.getenv("UPLOAD_DIR", "backend/uploads")),
+        allowed_origins=allowed_origins,
+        train_data_path=Path(os.getenv("TRAIN_DATA_PATH", "data/sample_issues.csv")),
+        category_model_path=Path(os.getenv("CATEGORY_MODEL_PATH", "models/category_model.joblib")),
+        urgency_model_path=Path(os.getenv("URGENCY_MODEL_PATH", "models/urgency_model.joblib")),
+    )
+
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     settings.db_path.parent.mkdir(parents=True, exist_ok=True)
     return settings

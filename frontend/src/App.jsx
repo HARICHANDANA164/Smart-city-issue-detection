@@ -19,7 +19,7 @@ const emptyForm = {
   category: CATEGORIES[0],
   latitude: '',
   longitude: '',
-  image: null,
+  image_base64: '',
 }
 
 function App() {
@@ -86,14 +86,10 @@ function App() {
   async function createIssue(e) {
     e.preventDefault()
     if (!token) return setMessage('Please login first')
-    const formData = new FormData()
-    Object.entries(issueForm).forEach(([key, value]) => {
-      if (value !== null && value !== '') formData.append(key, value)
-    })
     const resp = await fetch(`${API_BASE_URL}/issues`, {
       method: 'POST',
-      headers: authHeaders,
-      body: formData,
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify(issueForm),
     })
     const data = await resp.json()
     if (!resp.ok) return setMessage(data.detail || 'Could not create issue')
@@ -117,12 +113,10 @@ function App() {
   }
 
   async function updateStatus(id, status) {
-    const formData = new FormData()
-    formData.append('status', status)
     const resp = await fetch(`${API_BASE_URL}/issues/${id}/status`, {
       method: 'PATCH',
-      headers: authHeaders,
-      body: formData,
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ status }),
     })
     if (resp.ok) {
       setMessage('Status updated')
@@ -198,8 +192,14 @@ function App() {
               accept="image/*"
               onChange={(e) => {
                 const file = e.target.files?.[0]
-                setIssueForm({ ...issueForm, image: file || null })
-                if (file) setPreview(URL.createObjectURL(file))
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = () => {
+                  const b64 = String(reader.result || '')
+                  setIssueForm({ ...issueForm, image_base64: b64 })
+                  setPreview(b64)
+                }
+                reader.readAsDataURL(file)
               }}
             />
             {preview ? <img src={preview} alt="preview" className="h-24 rounded object-cover" /> : null}

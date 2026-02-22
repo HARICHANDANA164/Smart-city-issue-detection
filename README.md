@@ -24,10 +24,10 @@ Base: `/api/v1`
 - `POST /auth/login` - login and receive JWT token
 
 ### Issues
-- `POST /issues` - create issue (multipart: title, description, category, lat/lng, image)
+- `POST /issues` - create issue (JSON: title, description, category, lat/lng, optional `image_base64`)
 - `GET /issues` - public list with filters (`status`, `category`, `search`, `page`, `page_size`)
 - `DELETE /issues/{issue_id}` - delete own issue (or any if authority)
-- `PATCH /issues/{issue_id}/status` - authority-only status update with optional resolution image/comment
+- `PATCH /issues/{issue_id}/status` - authority-only status update with optional `resolution_image_base64` and comment
 - `GET /issues/{issue_id}/updates` - status timeline for tracking
 
 ### Dashboard / Analytics

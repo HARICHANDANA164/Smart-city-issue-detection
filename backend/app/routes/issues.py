@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends
 
 from app.controllers.issue_controller import IssueController
 from app.db.database import Database
 from app.dependencies import get_current_user, get_db, require_authority
-from app.schemas.issue import IssueResponse, IssuesListResponse, StatusUpdateResponse
+from app.schemas.issue import IssueCreateRequest, IssueResponse, IssuesListResponse, StatusUpdateRequest, StatusUpdateResponse
 from app.services.issue_service import IssueService
 
 router = APIRouter(prefix="/issues", tags=["issues"])
@@ -21,26 +21,21 @@ def get_service(db: Database = Depends(get_db)) -> IssueService:
 
 @router.post("", response_model=IssueResponse)
 def create_issue(
-    title: str = Form(...),
-    description: str = Form(...),
-    category: str = Form(...),
-    latitude: float = Form(...),
-    longitude: float = Form(...),
-    image: UploadFile | None = File(default=None),
+    payload: IssueCreateRequest,
     current_user: dict = Depends(get_current_user),
     service: IssueService = Depends(get_service),
 ):
-    image_path = service.save_upload(image, folder="issues")
-    payload = {
+    image_path = service.save_base64_image(payload.image_base64, folder="issues")
+    issue_payload = {
         "user_id": current_user["id"],
-        "title": title,
-        "description": description,
-        "category": category,
-        "latitude": latitude,
-        "longitude": longitude,
+        "title": payload.title,
+        "description": payload.description,
+        "category": payload.category,
+        "latitude": payload.latitude,
+        "longitude": payload.longitude,
         "image_path": image_path,
     }
-    return service.create_issue(payload)
+    return service.create_issue(issue_payload)
 
 
 @router.get("", response_model=IssuesListResponse)
@@ -69,13 +64,16 @@ def delete_issue(
 @router.patch("/{issue_id}/status", response_model=IssueResponse)
 def update_issue_status(
     issue_id: str,
-    status: str = Form(...),
-    comment: str | None = Form(default=None),
-    resolution_image: UploadFile | None = File(default=None),
+    payload: StatusUpdateRequest,
     _: dict = Depends(require_authority),
     service: IssueService = Depends(get_service),
 ):
-    return service.update_status(issue_id=issue_id, status_value=status, comment=comment, resolution_upload=resolution_image)
+    return service.update_status(
+        issue_id=issue_id,
+        status_value=payload.status,
+        comment=payload.comment,
+        resolution_image_base64=payload.resolution_image_base64,
+    )
 
 
 @router.get("/{issue_id}/updates", response_model=list[StatusUpdateResponse])

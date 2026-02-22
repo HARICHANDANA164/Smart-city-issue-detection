@@ -4,7 +4,6 @@ from functools import lru_cache
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-import jwt
 
 from app.core.config import get_settings
 from app.core.security import decode_token
@@ -28,7 +27,7 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
     try:
         payload = decode_token(credentials.credentials)
-    except jwt.PyJWTError as exc:
+    except Exception as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
 
     user = db.get_user_by_id(payload.get("sub", ""))
