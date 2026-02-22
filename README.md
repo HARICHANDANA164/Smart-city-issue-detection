@@ -1,93 +1,64 @@
-# Real-Time Smart City Issue Detection and AI-Assisted Resolution System
+# Smart City Issue Detection (Production-Ready Upgrade)
 
-A demo-ready full-stack project:
-- **2x ML models** (TF‑IDF + Logistic Regression):
-  - **Category** classification
-  - **Urgency** prediction (`Low` / `Medium` / `High`) trained from **pseudo-labels**
-- **FastAPI** backend (AWS Lambda / API Gateway ready via Mangum)
-- **React (Vite)** frontend:
-  - Citizen complaint submission
-  - Authority dashboard with filters
-- **SQLite** persistence for local demo (easy to swap to DynamoDB)
+Full-stack issue reporting platform with JWT auth, role-based workflows, analytics, and map-aware reporting.
 
-## Folder structure
-- `frontend/` React UI
-- `backend/` FastAPI API (Lambda-compatible handler included)
-- `models/` ML download + training scripts (2 models)
-- `data/` sample NYC 311 subsets (CSV) + SQLite DB (created at runtime)
+## Tech Stack
+- Backend: FastAPI + SQLite (easy PostgreSQL migration path)
+- Frontend: React (Vite) + Tailwind utility classes
+- ML: Existing category/urgency classifier preserved via `/api/v1/ml/predict`
 
-## Local run (quickstart)
+## Folder Structure
+- `backend/app/core` - settings + security (JWT, bcrypt)
+- `backend/app/routes` - REST routes
+- `backend/app/controllers` - route orchestration layer
+- `backend/app/services` - domain logic
+- `backend/app/db` - persistence layer
+- `backend/uploads` - issue and resolution images
+- `frontend/src` - responsive dashboards + report form + map embed
+
+## API Endpoints
+Base: `/api/v1`
+
+### Authentication
+- `POST /auth/register` - register (`citizen` or `authority`)
+- `POST /auth/login` - login and receive JWT token
+
+### Issues
+- `POST /issues` - create issue (multipart: title, description, category, lat/lng, image)
+- `GET /issues` - public list with filters (`status`, `category`, `search`, `page`, `page_size`)
+- `DELETE /issues/{issue_id}` - delete own issue (or any if authority)
+- `PATCH /issues/{issue_id}/status` - authority-only status update with optional resolution image/comment
+- `GET /issues/{issue_id}/updates` - status timeline for tracking
+
+### Dashboard / Analytics
+- `GET /dashboard/analytics` - totals (`total_issues`, `pending`, `completed`)
+
+### ML
+- `POST /ml/predict` - complaint classification (category + urgency)
+
+### Other
+- `GET /health` - health check
+- `GET /uploads/...` - uploaded image serving
+
+## Run Locally
 
 ### 1) Backend
-
 ```bash
 python -m venv .venv
-.\.venv\Scripts\activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r backend/requirements.txt
-
 uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The backend will load model artifacts from `models/artifacts/`.
-If missing, it will train them on first run using `TRAIN_DATA_PATH` (default: `data/nyc_311_subset.csv`).
-
 ### 2) Frontend
-
 ```bash
 cd frontend
 npm install
-
-# PowerShell:
-$env:VITE_API_BASE_URL="http://localhost:8000"
-npm run dev
+# Optional: export VITE_API_BASE_URL=http://localhost:8000/api/v1
+npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
-Open the dev server URL shown in the terminal.
-
-## API
-
-### POST `/predict`
-Input:
-```json
-{ "complaint": "Water main leak flooding the street near 5th Ave." }
-```
-
-Output:
-```json
-{
-  "category": "Water & Drainage",
-  "urgency": "High",
-  "acknowledgment": "...",
-  "suggestion": "..."
-}
-```
-
-### GET `/complaints`
-Returns stored complaints for the Authority Dashboard.
-Optional query params: `category`, `urgency`.
-
-## Train models (optional / recommended)
-
-You can download a bigger subset of NYC 311 and train both models:
-
-```bash
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r models/requirements.txt
-
-python models/download_nyc_311_subset.py
-python models/train_models.py
-```
-
-## AWS readiness notes
-
-- **Stateless API**: `/predict` uses saved model artifacts and request text only.
-- **Environment variables**:
-  - `CATEGORY_MODEL_PATH`
-  - `URGENCY_MODEL_PATH`
-  - `TRAIN_DATA_PATH`
-  - `DB_PATH`
-  - `ALLOWED_ORIGINS`
-- **Lambda handler**: `backend.app.main:handler`
-- **Storage swap**: replace `backend/app/db.py` repository with DynamoDB (schema is simple: `id`, `created_at`, `text`, `category`, `urgency`).
-
+## Optional Enhancements Included
+- Image preview before upload
+- Pagination (`page`, `page_size`) on issue listing
+- Status history endpoint usable for notification/timeline UIs
