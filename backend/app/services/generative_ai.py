@@ -1,43 +1,32 @@
 from __future__ import annotations
 
-"""
-Generative AI module (prompt-based, no training).
-
-For this demo we use simple templated logic to produce:
-- an acknowledgment message (citizen-facing)
-- suggested resolution steps (authority-facing)
-
-Later, you can swap this implementation for an LLM call (Bedrock/OpenAI/etc.)
-without changing the API contract.
-"""
-
 from typing import Literal
 
-from ..schemas import Category, Urgency
+Category = Literal[
+    "Road & Infrastructure",
+    "Water & Drainage",
+    "Sanitation",
+    "Electricity",
+    "Public Safety",
+    "Other",
+]
+Urgency = Literal["High", "Medium", "Low"]
 
 
 def generate_acknowledgment(category: Category, urgency: Urgency) -> str:
     urgency_line = {
-        # ASCII-only (avoids curly apostrophes/encoding issues in some terminals)
         "High": "We've flagged this as HIGH priority and will act immediately.",
         "Medium": "We've marked this as MEDIUM priority and will schedule a prompt response.",
         "Low": "We've marked this as LOW priority and will address it in the normal queue.",
     }[urgency]
-
-    return (
-        f"Thanks for reporting this {category} issue. "
-        f"{urgency_line} "
-        "You will receive updates as it progresses."
-    )
+    return f"Thanks for reporting this {category} issue. {urgency_line} You will receive updates as it progresses."
 
 
 def generate_suggestions(category: Category, urgency: Urgency) -> list[str]:
-    # Generic steps that apply to most categories.
     base = [
         "Log the complaint and assign it to the responsible department.",
         "Verify the location/details and capture evidence (photo/video) if available.",
     ]
-
     if urgency == "High":
         base.insert(0, "Dispatch an on-call team to assess and make the area safe.")
 
@@ -62,11 +51,10 @@ def generate_suggestions(category: Category, urgency: Urgency) -> list[str]:
             "Notify the nearest patrol/unit and increase monitoring of the area.",
             "Address hazards (e.g., missing cover/light/signal) with the relevant department.",
         ],
+        "Other": [
+            "Assign to general civic operations for triage and dispatch.",
+            "Route to the appropriate specialized department after initial assessment.",
+        ],
     }
 
-    closing = [
-        "Update the complaint status once work is completed.",
-    ]
-
-    return base + category_specific[category] + closing
-
+    return base + category_specific[category] + ["Update the complaint status once work is completed."]
