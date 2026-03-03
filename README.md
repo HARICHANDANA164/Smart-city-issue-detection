@@ -1,93 +1,114 @@
-# Real-Time Smart City Issue Detection and AI-Assisted Resolution System
+# Smart City Issue Detection (Production-Ready Upgrade)
 
-A demo-ready full-stack project:
-- **2x ML models** (TF‑IDF + Logistic Regression):
-  - **Category** classification
-  - **Urgency** prediction (`Low` / `Medium` / `High`) trained from **pseudo-labels**
-- **FastAPI** backend (AWS Lambda / API Gateway ready via Mangum)
-- **React (Vite)** frontend:
-  - Citizen complaint submission
-  - Authority dashboard with filters
-- **SQLite** persistence for local demo (easy to swap to DynamoDB)
+Full-stack issue reporting platform with JWT auth, role-based workflows, analytics, and map-aware reporting.
 
-## Folder structure
-- `frontend/` React UI
-- `backend/` FastAPI API (Lambda-compatible handler included)
-- `models/` ML download + training scripts (2 models)
-- `data/` sample NYC 311 subsets (CSV) + SQLite DB (created at runtime)
+## Tech Stack
+- Backend: FastAPI + SQLite (easy PostgreSQL migration path)
+- Frontend: React (Vite) + Tailwind utility classes
+- ML: Existing category/urgency classifier preserved via `/api/v1/ml/predict`
 
-## Local run (quickstart)
+## Folder Structure
+- `backend/app/core` - settings + security (JWT + password hashing)
+- `backend/app/routes` - REST routes
+- `backend/app/controllers` - route orchestration layer
+- `backend/app/services` - domain logic
+- `backend/app/db` - persistence layer
+- `backend/uploads` - issue and resolution images
+- `frontend/src` - responsive dashboards + report form + map embed
 
-### 1) Backend
+## API Endpoints
+Base: `/api/v1`
 
+### Authentication
+- `POST /auth/register` - register (`citizen` or `authority`)
+- `POST /auth/login` - login and receive JWT token
+
+### Issues
+- `POST /issues` - create issue (JSON: title, description, category, lat/lng, optional `image_base64`)
+- `GET /issues` - public list with filters (`status`, `category`, `search`, `page`, `page_size`)
+- `DELETE /issues/{issue_id}` - delete own issue (or any if authority)
+- `PATCH /issues/{issue_id}/status` - authority-only status update with optional `resolution_image_base64` and comment
+- `GET /issues/{issue_id}/updates` - status timeline for tracking
+
+### Dashboard / Analytics
+- `GET /dashboard/analytics` - totals (`total_issues`, `pending`, `completed`)
+
+### ML
+- `POST /ml/predict` - complaint classification (category + urgency)
+
+### Other
+- `GET /health` - health check
+- `GET /uploads/...` - uploaded image serving
+
+---
+
+## Run on your desktop (clear step-by-step)
+
+### Prerequisites
+- Python **3.10+**
+- Node.js **18+** and npm
+- Git
+
+### 1) Clone and open project
 ```bash
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r backend/requirements.txt
-
-uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+git clone <your-repo-url>
+cd Smart-city-issue-detection
 ```
 
-The backend will load model artifacts from `models/artifacts/`.
-If missing, it will train them on first run using `TRAIN_DATA_PATH` (default: `data/nyc_311_subset.csv`).
+### 2) Backend setup/start
+> Important: run backend commands **inside `backend/`** so imports resolve correctly.
 
-### 2) Frontend
+#### macOS/Linux
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
 
+#### Windows (PowerShell)
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Backend will be live at:
+- API: `http://localhost:8000`
+- Swagger: `http://localhost:8000/docs`
+
+### 3) Frontend setup/start (new terminal)
 ```bash
 cd frontend
 npm install
-
-# PowerShell:
-$env:VITE_API_BASE_URL="http://localhost:8000"
-npm run dev
 ```
 
-Open the dev server URL shown in the terminal.
-
-## API
-
-### POST `/predict`
-Input:
-```json
-{ "complaint": "Water main leak flooding the street near 5th Ave." }
-```
-
-Output:
-```json
-{
-  "category": "Water & Drainage",
-  "urgency": "High",
-  "acknowledgment": "...",
-  "suggestion": "..."
-}
-```
-
-### GET `/complaints`
-Returns stored complaints for the Authority Dashboard.
-Optional query params: `category`, `urgency`.
-
-## Train models (optional / recommended)
-
-You can download a bigger subset of NYC 311 and train both models:
-
+#### macOS/Linux
 ```bash
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r models/requirements.txt
-
-python models/download_nyc_311_subset.py
-python models/train_models.py
+export VITE_API_BASE_URL=http://localhost:8000/api/v1
+npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
-## AWS readiness notes
+#### Windows (PowerShell)
+```powershell
+$env:VITE_API_BASE_URL="http://localhost:8000/api/v1"
+npm run dev -- --host 0.0.0.0 --port 5173
+```
 
-- **Stateless API**: `/predict` uses saved model artifacts and request text only.
-- **Environment variables**:
-  - `CATEGORY_MODEL_PATH`
-  - `URGENCY_MODEL_PATH`
-  - `TRAIN_DATA_PATH`
-  - `DB_PATH`
-  - `ALLOWED_ORIGINS`
-- **Lambda handler**: `backend.app.main:handler`
-- **Storage swap**: replace `backend/app/db.py` repository with DynamoDB (schema is simple: `id`, `created_at`, `text`, `category`, `urgency`).
+Frontend:
+- `http://localhost:5173`
 
+### 4) Quick functional check
+1. Register a **citizen** account.
+2. Create an issue.
+3. Register another account as **authority**.
+4. Login as authority and update issue status.
+5. Verify analytics cards update.
+
+## Optional Enhancements Included
+- Image preview before upload
+- Pagination (`page`, `page_size`) on issue listing
+- Status history endpoint usable for notification/timeline UIs
