@@ -1,38 +1,36 @@
 # Backend (FastAPI)
 
-## Endpoints
-- `POST /predict` → classify complaint, urgency, AI messages, store record
-- `GET /complaints` → list submitted complaints (supports `category`, `urgency`)
-- `GET /health` → health check
+## Highlights
+- JWT authentication with role-based authorization
+- Secure password hashing
+- Issue CRUD + workflow states (`Pending`, `Processing`, `Completed`)
+- Authority-only status updates + resolution comments/image payload support
+- Public analytics API
+- Modular architecture (`routes`, `controllers`, `services`, `db`)
 
-## Local run
+## Start backend
+> Run from `backend/` directory.
 
-1) Create a venv + install deps:
-
+### macOS/Linux
 ```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Windows PowerShell
+```powershell
+cd backend
 python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r backend/requirements.txt
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-2) (Optional) set environment variables (see `backend/env.example`).
+Swagger docs:
+- `http://localhost:8000/docs`
 
-3) Start API:
-
-```bash
-uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-## ML models
-This backend expects two model artifacts:
-- `models/artifacts/category_model.joblib`
-- `models/artifacts/urgency_model.joblib`
-
-If they don't exist, the backend will train them on first run using `TRAIN_DATA_PATH`
-(default: `data/nyc_311_subset.csv`).
-
-## AWS Lambda readiness
-- The Lambda handler is `backend.app.main:handler` (powered by Mangum).
-- Use env vars for config (`CATEGORY_MODEL_PATH`, `URGENCY_MODEL_PATH`, `DB_PATH`, etc.).
-- For real cloud deployment, replace SQLite repository with DynamoDB (same API contract).
-
+Health:
+- `GET /health`
